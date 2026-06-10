@@ -4,6 +4,7 @@ import android.Manifest
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -48,10 +49,10 @@ fun ClientScreen() {
 
     val connectionState by vm.bleClient.connectionState.collectAsState()
 
-    val permissionLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestMultiplePermissions()
-        ) { }
+//    val permissionLauncher =
+//        rememberLauncherForActivityResult(
+//            contract = ActivityResultContracts.RequestMultiplePermissions()
+//        ) { }
 
     fun requiredPermissions(): Array<String> {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -71,6 +72,24 @@ fun ClientScreen() {
 
     val scannerAvailable =
         remember { BleCapabilityChecker.isBleScannerAvailable(adapter) }
+
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+
+            val allGranted =
+                permissions.values.all { it }
+
+            Toast.makeText(
+                context,
+                if (allGranted)
+                    "All Permissions Granted"
+                else
+                    "Some Permissions Denied",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
 
     LazyColumn(
         modifier = Modifier
@@ -95,10 +114,10 @@ fun ClientScreen() {
 
                     Text(
                         when (connectionState) {
-                            ConnectionState.IDLE -> "Idle ⚪"
-                            ConnectionState.CONNECTING -> "Connecting 🟡"
-                            ConnectionState.CONNECTED -> "Connected 🟢"
-                            ConnectionState.DISCONNECTED -> "Disconnected 🔴"
+                            ConnectionState.IDLE -> "Idle"
+                            ConnectionState.CONNECTING -> "Connecting"
+                            ConnectionState.CONNECTED -> "Connected"
+                            ConnectionState.DISCONNECTED -> "Disconnected"
                         }
                     )
                 }
@@ -110,9 +129,9 @@ fun ClientScreen() {
         item {
             Text(
                 if (scannerAvailable)
-                    "Scanner Available ✅"
+                    "Scanner Available"
                 else
-                    "Scanner Not Available ❌"
+                    "Scanner Not Available"
             )
         }
         item {

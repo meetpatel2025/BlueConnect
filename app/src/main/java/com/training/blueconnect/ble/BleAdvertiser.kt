@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 class BleAdvertiser(
     private val bluetoothAdapter: BluetoothAdapter
 ) {
+    private var tempIsAdvertising = false
 
     private val advertiser: BluetoothLeAdvertiser?
             = bluetoothAdapter.bluetoothLeAdvertiser
@@ -31,14 +32,43 @@ class BleAdvertiser(
                 settingsInEffect: AdvertiseSettings?
             ) {
                 _isAdvertising.value = true
+                Log.d(
+                    "ADVERTISE",
+                    "Advertising started successfully"
+                )
             }
 
-            override fun onStartFailure(
-                errorCode: Int
-            ) {
-                _isAdvertising.value = false
+            override fun onStartFailure(errorCode: Int) {
+
+                val reason = when(errorCode) {
+
+                    ADVERTISE_FAILED_ALREADY_STARTED ->
+                        "ALREADY_STARTED"
+
+                    ADVERTISE_FAILED_DATA_TOO_LARGE ->
+                        "DATA_TOO_LARGE"
+
+                    ADVERTISE_FAILED_FEATURE_UNSUPPORTED ->
+                        "FEATURE_UNSUPPORTED"
+
+                    ADVERTISE_FAILED_INTERNAL_ERROR ->
+                        "INTERNAL_ERROR"
+
+                    ADVERTISE_FAILED_TOO_MANY_ADVERTISERS ->
+                        "TOO_MANY_ADVERTISERS"
+
+                    else ->
+                        "UNKNOWN"
+                }
+
+                Log.e(
+                    "ADVERTISE",
+                    "Advertising failed: $errorCode ($reason)"
+                )
             }
         }
+
+
 
     @SuppressLint("MissingPermission")
     fun startAdvertising() {
@@ -48,35 +78,37 @@ class BleAdvertiser(
             return
         }
 
-        bluetoothAdapter.name =
-            BleConstants.DEVICE_NAME
+        if (_isAdvertising.value) {
+            Log.d("ADVERTISE", "Already advertising")
+            return
+        }
 
-        val settings =
-            AdvertiseSettings.Builder()
-                .setAdvertiseMode(
-                    AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY
-                )
-                .setConnectable(true)
-                .setTimeout(0)
-                .setTxPowerLevel(
-                    AdvertiseSettings.ADVERTISE_TX_POWER_HIGH
-                )
-                .build()
+        bluetoothAdapter.name = BleConstants.DEVICE_NAME
 
-        val data =
-            AdvertiseData.Builder()
-                .setIncludeDeviceName(true)
-                .addServiceUuid(
-                    ParcelUuid(
-                        BleConstants.SERVICE_UUID
-                    )
-                )
-                .build()
+        val settings = AdvertiseSettings.Builder()
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+            .setConnectable(true)
+            .setTimeout(0)
+            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+            .build()
+
+        val advertiseData = AdvertiseData.Builder()
+            .setIncludeTxPowerLevel(true)
+            .addServiceUuid(ParcelUuid(BleConstants.SERVICE_UUID))
+            .build()
+
+        val scanResponse = AdvertiseData.Builder()
+            .setIncludeDeviceName(true)
+            .build()
+
+        Log.d("ADVERTISE", "Device Name = ${bluetoothAdapter.name}")
+        Log.d("ADVERTISE", "Service UUID = ${BleConstants.SERVICE_UUID}")
         Log.d("ADVERTISE", "Advertising....")
 
         advertiser.startAdvertising(
             settings,
-            data,
+            advertiseData,
+            scanResponse,
             advertiseCallback
         )
     }

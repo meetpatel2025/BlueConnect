@@ -10,12 +10,16 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.training.blueconnect.model.BleMessage
 import com.training.blueconnect.model.ConnectionState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.util.UUID
 
 class BleClient(
     private val context: Context
@@ -51,9 +55,18 @@ class BleClient(
     // ----------------------------------------------------
 
     private fun hasBluetoothConnectPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context, Manifest.permission.BLUETOOTH_CONNECT
-        ) == PackageManager.PERMISSION_GRANTED
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+
+        } else {
+
+            true
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -148,6 +161,12 @@ class BleClient(
             gatt: BluetoothGatt, status: Int, newState: Int
         ) {
 
+            Log.d("BLE_SERVER", "status=$status newState=$newState")
+
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.e("BLE_SERVER", "BAD STATUS → disconnect likely")
+            }
+
             when (newState) {
 
                 BluetoothProfile.STATE_CONNECTED -> {
@@ -157,6 +176,9 @@ class BleClient(
                     )
 
                     _isConnected.value = true
+
+                    _connectionState.value =
+                        ConnectionState.CONNECTED
 
                     if (!hasBluetoothConnectPermission()) {
                         Log.e(
@@ -168,7 +190,6 @@ class BleClient(
                     try {
 
                         gatt.discoverServices()
-
                     } catch (e: SecurityException) {
 
                         Log.e(
@@ -184,6 +205,9 @@ class BleClient(
                     )
 
                     _isConnected.value = false
+
+                    _connectionState.value =
+                        ConnectionState.DISCONNECTED
                 }
             }
         }
@@ -192,19 +216,6 @@ class BleClient(
         override fun onServicesDiscovered(
             gatt: BluetoothGatt, status: Int
         ) {
-
-            val descriptor = targetCharacteristic?.getDescriptor(
-                java.util.UUID.fromString(
-                    "00002902-0000-1000-8000-00805f9b34fb"
-                )
-            )
-
-            descriptor?.let {
-
-                it.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-
-                bluetoothGatt?.writeDescriptor(it)
-            }
 
             gatt.services.forEach {
 
@@ -221,6 +232,43 @@ class BleClient(
                 BleConstants.CHARACTERISTIC_UUID
             )
 
+            targetCharacteristic?.let { characteristic ->
+
+                Handler(Looper.getMainLooper()).postDelayed({
+
+                    gatt.setCharacteristicNotification(characteristic, true)
+
+                    val descriptor = characteristic.getDescriptor(
+                        UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+                    )
+
+                    descriptor?.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    descriptor?.let {
+                        gatt.writeDescriptor(it)
+                    }
+
+                }, 500)
+
+                gatt.setCharacteristicNotification(
+                    characteristic,
+                    true
+                )
+
+                val descriptor =
+                    characteristic.getDescriptor(
+                        java.util.UUID.fromString(
+                            "00002902-0000-1000-8000-00805f9b34fb"
+                        )
+                    )
+
+                descriptor?.value =
+                    BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+
+                descriptor?.let {
+                    gatt.writeDescriptor(it)
+                }
+            }
+
             if (targetCharacteristic == null) {
 
                 Log.e(
@@ -231,6 +279,9 @@ class BleClient(
 
                 Log.d(
                     TAG, "Characteristic Found"
+                )
+                logger?.invoke(
+                    "Characteristic found"
                 )
             }
         }
@@ -245,6 +296,10 @@ class BleClient(
 
             _messages.value += BleMessage(
                 source = "Server", message = response
+            )
+
+            logger?.invoke(
+                "Received: $response"
             )
         }
 

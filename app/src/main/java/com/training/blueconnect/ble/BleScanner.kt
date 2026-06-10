@@ -3,7 +3,10 @@ package com.training.blueconnect.ble
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
+import android.os.ParcelUuid
 import android.util.Log
 import com.training.blueconnect.model.BleDevice
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,11 +31,17 @@ class BleScanner(
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val device = result.device
 
+
             val deviceName = try {
                 device.name ?: "Unknown Device"
             } catch (e: SecurityException) {
                 "Unknown Device"
             }
+
+            Log.d(
+                "SCAN",
+                "Device Found = ${result.device.address} and Name = $deviceName"
+            )
 
             val bleDevice = BleDevice(
                 name = deviceName,
@@ -42,6 +51,21 @@ class BleScanner(
 
             discoveredDevices[device.address] = bleDevice
             _devices.value = discoveredDevices.values.toList()
+
+            Log.d(
+                "SCAN",
+                "Device List Size = ${_devices.value.size}"
+            )
+        }
+
+        override fun onScanFailed(
+            errorCode: Int
+        ) {
+
+            Log.e(
+                "BLE",
+                "Scan Failed: $errorCode"
+            )
         }
     }
 
@@ -60,7 +84,37 @@ class BleScanner(
 
         _devices.value = emptyList()
 
-        scanner.startScan(scanCallback)
+        val filter =
+            ScanFilter.Builder()
+                .setServiceUuid(
+                    ParcelUuid(
+                        BleConstants.SERVICE_UUID
+                    )
+                )
+                .build()
+
+        val settings =
+            ScanSettings.Builder()
+                .setScanMode(
+                    ScanSettings.SCAN_MODE_LOW_LATENCY
+                )
+                .build()
+
+        Log.d(
+            "SCAN",
+            "startScan called"
+        )
+
+//        scanner.startScan(
+//            listOf(filter),
+//            settings,
+//            scanCallback
+//        )
+        scanner.startScan(
+            scanCallback
+        )
+
+
     }
 
     @SuppressLint("MissingPermission")

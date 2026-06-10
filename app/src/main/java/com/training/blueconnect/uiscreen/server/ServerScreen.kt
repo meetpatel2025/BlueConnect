@@ -4,6 +4,8 @@ import android.Manifest
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.os.Build
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -28,13 +30,37 @@ fun ServerScreen() {
 
     val adapter = bluetoothManager.adapter
 
+    LaunchedEffect(Unit) {
+
+        android.util.Log.d(
+            "BLE_CAP",
+            "isMultipleAdvertisementSupported = ${
+                adapter.isMultipleAdvertisementSupported
+            }"
+        )
+
+        android.util.Log.d(
+            "BLE_CAP",
+            "isOffloadedFilteringSupported = ${
+                adapter.isOffloadedFilteringSupported
+            }"
+        )
+
+        android.util.Log.d(
+            "BLE_CAP",
+            "isOffloadedScanBatchingSupported = ${
+                adapter.isOffloadedScanBatchingSupported
+            }"
+        )
+    }
+
     val deviceInfo = remember {
         DeviceInfoProvider.getDeviceInfo(context)
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { }
+//    val permissionLauncher = rememberLauncherForActivityResult(
+//        contract = ActivityResultContracts.RequestMultiplePermissions()
+//    ) { }
 
     fun requiredPermissions(): Array<String> {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -74,6 +100,48 @@ fun ServerScreen() {
 
     val scrollState = rememberScrollState()
 
+    var allPermissionsGranted by remember {
+        mutableStateOf(false)
+    }
+
+    val toastMessage by
+    vm.toastMessage.collectAsState()
+
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+
+            allPermissionsGranted =
+                permissions.values.all { it }
+
+        }
+
+    LaunchedEffect(allPermissionsGranted) {
+        if (allPermissionsGranted) {
+            Toast.makeText(
+                context,
+                "All permissions granted",
+                Toast.LENGTH_SHORT
+            ).show()
+            allPermissionsGranted = false
+        }
+    }
+
+    LaunchedEffect(toastMessage) {
+
+        toastMessage?.let {
+
+            Toast.makeText(
+                context,
+                it,
+                Toast.LENGTH_LONG
+            ).show()
+
+            vm.clearToastMessage()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -110,13 +178,13 @@ fun ServerScreen() {
                 )
 
                 Text(
-                    text = if (isServerRunning) "GATT Server: Running ✅"
-                    else "GATT Server: Stopped ❌"
+                    text = if (isServerRunning) "GATT Server: Running"
+                    else "GATT Server: Stopped"
                 )
 
                 Text(
-                    text = if (isAdvertising) "Advertising: Active ✅"
-                    else "Advertising: Inactive ❌"
+                    text = if (isAdvertising) "Advertising: Active"
+                    else "Advertising: Inactive"
                 )
             }
         }
@@ -140,8 +208,8 @@ fun ServerScreen() {
                 )
 
                 Text(
-                    text = if (isClientConnected) "Connected 🟢"
-                    else "Disconnected 🔴"
+                    text = if (isClientConnected) "Connected"
+                    else "Disconnected"
                 )
 
                 Text(
@@ -191,15 +259,15 @@ fun ServerScreen() {
         )
 
         Text(
-            text = if (advertiserAvailable) "Advertiser: Available ✅"
-            else "Advertiser: Not Available ❌"
+            text = if (advertiserAvailable) "Advertiser: Available"
+            else "Advertiser: Not Available"
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = if (isAdvertising) "Status: Advertising 🟢"
-            else "Status: Stopped 🔴"
+            text = if (isAdvertising) "Status: Advertising"
+            else "Status: Stopped"
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -215,6 +283,8 @@ fun ServerScreen() {
         Spacer(modifier = Modifier.height(12.dp))
         Button(
             onClick = {
+                Log.d("BLE", "startServer called")
+                Log.d("BLE", "startAdvertising called")
                 vm.startServer()
             }, modifier = Modifier.fillMaxWidth()
         ) {
@@ -224,6 +294,7 @@ fun ServerScreen() {
         Spacer(modifier = Modifier.height(12.dp))
         Button(
             onClick = {
+                Log.d("BLE", "stopServer called")
                 vm.stopServer()
             }, modifier = Modifier.fillMaxWidth()
         ) {
@@ -234,15 +305,11 @@ fun ServerScreen() {
 
         Button(
             onClick = {
-                vm.sendNotification()
+                vm.onToggleStream()
             }) {
-            Text("Send Notification")
+            Text("Start/Stop Notification")
         }
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Spacer(
-            modifier = Modifier.height(20.dp)
-        )
+        Spacer(modifier = Modifier.height(44.dp))
 
         Text(
             text = "Server Logs", style = MaterialTheme.typography.titleLarge

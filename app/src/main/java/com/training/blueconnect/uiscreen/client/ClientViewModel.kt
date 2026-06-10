@@ -26,8 +26,20 @@ class ClientViewModel(
         _logs.value = (_logs.value + message).takeLast(100)
     }
 
+    //    fun startScan() {
+//        log("Scan started")
+//        scanner.startScan()
+//    }
     fun startScan() {
+
+        if (!bluetoothAdapter.isEnabled) {
+
+            log("Bluetooth disabled")
+            return
+        }
+
         log("Scan started")
+
         scanner.startScan()
     }
 
@@ -36,13 +48,31 @@ class ClientViewModel(
         scanner.stopScan()
     }
 
-    fun connect(address: String) {
+//    fun connect(address: String) {
+//        log("Connecting to $address")
+//
+//        val bluetoothDevice =
+//            bluetoothAdapter.getRemoteDevice(address)
+//
+//        bleClient.connect(bluetoothDevice)
+//    }
+
+    fun connect(
+        address: String
+    ) {
+
+        scanner.stopScan()
+
         log("Connecting to $address")
 
         val bluetoothDevice =
-            bluetoothAdapter.getRemoteDevice(address)
+            bluetoothAdapter.getRemoteDevice(
+                address
+            )
 
-        bleClient.connect(bluetoothDevice)
+        bleClient.connect(
+            bluetoothDevice
+        )
     }
 
     fun sendMessage(message: String) {

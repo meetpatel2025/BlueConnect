@@ -34,6 +34,9 @@ class ServerViewModel(
 
     val logs: StateFlow<List<String>> = _logs
 
+    val toastMessage =
+        gattServer.toastMessage
+
     fun startServer() {
 
         gattServer.startServer()
@@ -60,16 +63,35 @@ class ServerViewModel(
         addLog("GATT Server Stopped")
     }
 
-    fun sendNotification() {
-        gattServer.notifyClient(
-            "Notification from Server"
-        )
-        addLog("Notification Sent")
-    }
+//    fun sendNotification() {
+//        gattServer.notifyClient(
+//            "Notification from Server"
+//        )
+//        addLog("Notification Sent")
+//    }
 
     private fun addLog(
         message: String
     ) {
         _logs.value += message
     }
+
+//    fun onSendNotificationClick() {
+//        gattServer.sendRandomNotification()
+//    }
+
+    fun onToggleStream() {
+
+        if (gattServer.isStreaming()) {
+            gattServer.stopRandomNotificationStream()
+        } else {
+            gattServer.startRandomNotificationStream()
+        }
+    }
+
+    fun clearToastMessage() {
+        gattServer.clearToastMessage()
+    }
+
+
 }
