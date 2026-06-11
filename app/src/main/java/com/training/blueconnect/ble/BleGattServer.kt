@@ -9,11 +9,15 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class BleGattServer(
     private val context: Context, private val bluetoothManager: BluetoothManager
@@ -30,7 +34,6 @@ class BleGattServer(
 
     val receivedMessages: StateFlow<List<String>> = _receivedMessages
 
-
     private val _isClientConnected = MutableStateFlow(false)
 
     val isClientConnected: StateFlow<Boolean> = _isClientConnected
@@ -39,19 +42,17 @@ class BleGattServer(
 
     val serverLogs: StateFlow<List<String>> = _serverLogs
 
-    private var streamingJob: kotlinx.coroutines.Job? = null
+    private var notificationStatus: Job? = null
 
-    private val scope = kotlinx.coroutines.CoroutineScope(
-        kotlinx.coroutines.Dispatchers.IO
+    private val scope = CoroutineScope(
+        Dispatchers.IO
     )
 
-    private lateinit var writeCharacteristic: BluetoothGattCharacteristic
+//    private lateinit var writeCharacteristic: BluetoothGattCharacteristic
 
-    private val _toastMessage =
-        MutableStateFlow<String?>(null)
+    private val _toastMessage = MutableStateFlow<String?>(null)
 
-    val toastMessage: StateFlow<String?> =
-        _toastMessage
+    val toastMessage: StateFlow<String?> = _toastMessage
 
     private fun addLog(
         message: String
@@ -63,13 +64,23 @@ class BleGattServer(
         message: String
     ) {
         _receivedMessages.value += message
+        Log.d(
+            "BLE_SERVER",
+            "Messages count = ${_receivedMessages.value.size}"
+        )
     }
 
-    private fun hasPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context, Manifest.permission.BLUETOOTH_CONNECT
-        ) == PackageManager.PERMISSION_GRANTED
-    }
+//    private fun addReceivedMessage(message: String) {
+//        scope.launch {
+//            _receivedMessages.emit(_receivedMessages.value + message)
+//        }
+//    }
+
+//    private fun hasPermission(): Boolean {
+//        return ContextCompat.checkSelfPermission(
+//            context, Manifest.permission.BLUETOOTH_CONNECT
+//        ) == PackageManager.PERMISSION_GRANTED
+//    }
 
     @SuppressLint("MissingPermission")
     fun startServer() {
@@ -103,21 +114,17 @@ class BleGattServer(
             BleConstants.SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY
         )
 
-
         val characteristic = BluetoothGattCharacteristic(
             BleConstants.CHARACTERISTIC_UUID,
-
             BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-
             BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
         )
 
         val cccd = BluetoothGattDescriptor(
-            java.util.UUID.fromString(
-                "00002902-0000-1000-8000-00805f9b34fb"
+            UUID.fromString(
+                BleConstants.CCCD_UUID
             ), BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE
         )
-
 
         characteristic.addDescriptor(
             cccd
@@ -128,23 +135,12 @@ class BleGattServer(
             characteristic
         )
 
-//        writeCharacteristic.addDescriptor(cccd)
-//        writeCharacteristic.value =
-//            "Server Ready".toByteArray()
-
-//        service.addCharacteristic(
-//            characteristic
-//        )
         gattServer?.addService(
             service
         )
 
         Log.d(
-            "BLE", "Service Added"
-        )
-
-        Log.d(
-            "BLE", "Service Registered"
+            "BLE", "Service Added & registered"
         )
     }
 
@@ -173,77 +169,42 @@ class BleGattServer(
             when (newState) {
 
                 BluetoothProfile.STATE_CONNECTED -> {
-
-                    val deviceName =
-                        device.name ?: "Unknown Device"
-
-                    _toastMessage.value =
-                        "$deviceName Connected Successfully!!"
-
+                    val deviceName = device.name ?: "Unknown Device"
+                    _toastMessage.value = "$deviceName Connected Successfully!!"
                     connectedDevice = device
-
                     _isClientConnected.value = true
-
                     _connectedDeviceAddress.value = device.address
 
                     addLog(
-                        "Connected: ${device.address}"
+                        "Connected: ${device.address} : $deviceName device"
                     )
                 }
 
                 BluetoothProfile.STATE_DISCONNECTED -> {
-
                     connectedDevice = null
-
                     _isClientConnected.value = false
-
                     _connectedDeviceAddress.value = null
-
                     _receivedMessages.value = emptyList()
-
-                    val deviceName =
-                        device.name ?: "Unknown Device"
-
-                    _toastMessage.value =
-                        "$deviceName Disconnected & Messages Cleared"
+                    val deviceName = device.name ?: "Unknown Device"
+                    _toastMessage.value = "$deviceName Disconnected & Messages Cleared"
 
                     Log.d(
                         "BLE", "Device Disconnected"
                     )
                     addLog(
-                        "Disconnected: ${device.address}"
+                        "Disconnected: ${device.address} : $deviceName device"
                     )
-
                 }
             }
-
-
         }
 
-        override fun onMtuChanged(
-            device: BluetoothDevice, mtu: Int
-        ) {
-            Log.d(
-                "BLE_SERVER", "MTU changed: $mtu"
-            )
-        }
-
-//            @SuppressLint("MissingPermission")
-//            fun handleCharacteristicReadRequest(
-//                device: BluetoothDevice,
-//                requestId: Int,
-//                responseNeeded: Boolean
-//            ) {
-//                if (responseNeeded) {
-//                    gattServer?.sendResponse(
-//                        device,
-//                        requestId,
-//                        BluetoothGatt.GATT_SUCCESS,
-//                        0,
-//                        "Ram Ram From Server".toByteArray()
-//                    )
-//                }
-//            }
+//        override fun onMtuChanged(
+//            device: BluetoothDevice, mtu: Int
+//        ) {
+//            Log.d(
+//                "BLE_SERVER", "MTU changed: $mtu"
+//            )
+//        }
 
         @SuppressLint("MissingPermission")
         override fun onCharacteristicReadRequest(
@@ -280,11 +241,7 @@ class BleGattServer(
 
             if (responseNeeded) {
                 gattServer?.sendResponse(
-                    device,
-                    requestId,
-                    BluetoothGatt.GATT_SUCCESS,
-                    0,
-                    value
+                    device, requestId, BluetoothGatt.GATT_SUCCESS, 0, value
                 )
             }
         }
@@ -324,18 +281,19 @@ class BleGattServer(
 
             characteristic.value = responseMessage.toByteArray()
 
+            gattServer?.notifyCharacteristicChanged(
+                device,
+                characteristic,
+                false
+            )
+
+
             if (responseNeeded) {
 
                 gattServer?.sendResponse(
                     device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value
                 )
             }
-
-//                gattServer?.notifyCharacteristicChanged(
-//                    device,
-//                    characteristic,
-//                    false
-//                )
 
             Log.d(
                 "BLE", "Response sent: $responseMessage"
@@ -379,50 +337,17 @@ class BleGattServer(
         }
     }
 
-    //    @SuppressLint("MissingPermission")
-//    fun sendRandomNotification() {
-//
-//        val service =
-//            gattServer?.getService(BleConstants.SERVICE_UUID)
-//
-//        val characteristic =
-//            service?.getCharacteristic(BleConstants.CHARACTERISTIC_UUID)
-//
-//        if (service == null || characteristic == null) {
-//            Log.e("BLE", "Service or Characteristic null")
-//            return
-//        }
-//
-//        if (connectedDevice == null) {
-//            Log.e("BLE", "No device connected")
-//            return
-//        }
-//
-//        val randomData = "DATA_${(1000..9999).random()}"
-//
-//        characteristic.value = randomData.toByteArray()
-//
-//        Log.d("BLE_SERVER", "Sending notification: $randomData")
-//
-//        gattServer?.notifyCharacteristicChanged(
-//            connectedDevice,
-//            characteristic,
-//            false
-//        )
-//    }
     @SuppressLint("MissingPermission")
-    fun startRandomNotificationStream() {
+    fun startRandomNotification() {
 
-        if (streamingJob != null) {
+        if (notificationStatus != null) {
             Log.d("BLE", "Already streaming")
             return
         }
 
-        val service =
-            gattServer?.getService(BleConstants.SERVICE_UUID)
+        val service = gattServer?.getService(BleConstants.SERVICE_UUID)
 
-        val characteristic =
-            service?.getCharacteristic(BleConstants.CHARACTERISTIC_UUID)
+        val characteristic = service?.getCharacteristic(BleConstants.CHARACTERISTIC_UUID)
 
         if (service == null || characteristic == null) {
             Log.e("BLE", "Service or Characteristic null")
@@ -434,7 +359,7 @@ class BleGattServer(
             return
         }
 
-        streamingJob = scope.launch {
+        notificationStatus = scope.launch {
 
             Log.d("BLE", "Started streaming notifications")
 
@@ -445,9 +370,7 @@ class BleGattServer(
                 characteristic.value = value.toByteArray()
 
                 gattServer?.notifyCharacteristicChanged(
-                    connectedDevice,
-                    characteristic,
-                    false
+                    connectedDevice, characteristic, false
                 )
 
                 Log.d("BLE", "Sent: $value")
@@ -457,16 +380,16 @@ class BleGattServer(
         }
     }
 
-    fun stopRandomNotificationStream() {
+    fun stopRandomNotification() {
 
-        streamingJob?.cancel()
-        streamingJob = null
+        notificationStatus?.cancel()
+        notificationStatus = null
 
         Log.d("BLE", "Stopped streaming")
     }
 
-    fun isStreaming(): Boolean {
-        return streamingJob != null
+    fun isSending(): Boolean {
+        return notificationStatus != null
     }
 
     private fun hasBluetoothPermission(): Boolean {

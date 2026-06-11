@@ -90,7 +90,7 @@ fun ServerScreen() {
 
     val connectedDeviceAddress by vm.connectedDeviceAddress.collectAsState()
 
-    val serverLogs by vm.serverLogs.collectAsState()
+//    val serverLogs by vm.serverLogs.collectAsState()
 
     val receivedMessages by vm.receivedMessages.collectAsState()
 
@@ -140,6 +140,14 @@ fun ServerScreen() {
 
             vm.clearToastMessage()
         }
+    }
+
+    LaunchedEffect(receivedMessages) {
+
+        Log.d(
+            "SERVER_UI",
+            "Messages updated = $receivedMessages"
+        )
     }
 
     Column(
@@ -305,7 +313,7 @@ fun ServerScreen() {
 
         Button(
             onClick = {
-                vm.onToggleStream()
+                vm.randomNotification()
             }) {
             Text("Start/Stop Notification")
         }

@@ -29,7 +29,7 @@ fun HomeScreen(
     ) {
 
         Text(
-            text = "BLE Practice Lab",
+            text = "BLE Practice (BlueConnect)",
             style = MaterialTheme.typography.headlineLarge
         )
 

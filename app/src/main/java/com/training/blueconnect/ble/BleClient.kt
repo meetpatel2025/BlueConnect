@@ -31,7 +31,7 @@ class BleClient(
 
     private var bluetoothGatt: BluetoothGatt? = null
 
-    private var targetCharacteristic: BluetoothGattCharacteristic? = null
+    private var bltGattCharateristic: BluetoothGattCharacteristic? = null
 
     private val _messages = MutableStateFlow<List<BleMessage>>(emptyList())
 
@@ -49,10 +49,6 @@ class BleClient(
         get() = _connectionState
 
     var logger: ((String) -> Unit)? = null
-
-    // ----------------------------------------------------
-    // Permission Helper
-    // ----------------------------------------------------
 
     private fun hasBluetoothConnectPermission(): Boolean {
 
@@ -74,7 +70,8 @@ class BleClient(
 
         _connectionState.value = ConnectionState.CONNECTING
 
-        Log.d(TAG, "Connecting to ${device.address}")
+        Log.d(TAG, "Connecting device's address :${device.address}")
+        Log.d(TAG, "Connecting device's name : ${device.name}")
         logger?.invoke("Connected")
         bluetoothGatt = device.connectGatt(
             context, false, gattCallback
@@ -107,7 +104,7 @@ class BleClient(
             return
         }
 
-        val characteristic = targetCharacteristic
+        val characteristic = bltGattCharateristic
 
         if (characteristic == null) {
             Log.e(TAG, "Characteristic not discovered")
@@ -129,7 +126,7 @@ class BleClient(
             return
         }
 
-        val characteristic = targetCharacteristic
+        val characteristic = bltGattCharateristic
 
         if (characteristic == null) {
             Log.e(TAG, "Characteristic not discovered")
@@ -228,48 +225,55 @@ class BleClient(
                 BleConstants.SERVICE_UUID
             )
 
-            targetCharacteristic = service?.getCharacteristic(
+            bltGattCharateristic = service?.getCharacteristic(
                 BleConstants.CHARACTERISTIC_UUID
             )
 
-            targetCharacteristic?.let { characteristic ->
+            bltGattCharateristic?.let { characteristic ->
 
-                Handler(Looper.getMainLooper()).postDelayed({
+                Log.d(TAG, "Enabling notifications")
 
-                    gatt.setCharacteristicNotification(characteristic, true)
-
-                    val descriptor = characteristic.getDescriptor(
-                        UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+                val notificationEnabled =
+                    gatt.setCharacteristicNotification(
+                        characteristic,
+                        true
                     )
 
-                    descriptor?.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                    descriptor?.let {
-                        gatt.writeDescriptor(it)
-                    }
-
-                }, 500)
-
-                gatt.setCharacteristicNotification(
-                    characteristic,
-                    true
+                Log.d(
+                    TAG,
+                    "setCharacteristicNotification = $notificationEnabled"
                 )
 
-                val descriptor =
-                    characteristic.getDescriptor(
-                        java.util.UUID.fromString(
-                            "00002902-0000-1000-8000-00805f9b34fb"
-                        )
+                val descriptor = characteristic.getDescriptor(
+                    UUID.fromString(
+                        BleConstants.CCCD_UUID
+                    )
+                )
+
+                if (descriptor == null) {
+
+                    Log.e(
+                        TAG,
+                        "CCCD descriptor not found"
                     )
 
-                descriptor?.value =
-                    BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                } else {
 
-                descriptor?.let {
-                    gatt.writeDescriptor(it)
+                    descriptor.value =
+                        BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+
+                    gatt.writeDescriptor(
+                        descriptor
+                    )
+
+                    Log.d(
+                        TAG,
+                        "CCCD write requested"
+                    )
                 }
             }
 
-            if (targetCharacteristic == null) {
+            if (bltGattCharateristic == null) {
 
                 Log.e(
                     TAG, "Characteristic NOT Found"
@@ -303,7 +307,6 @@ class BleClient(
             )
         }
 
-        @Deprecated("Deprecated in Java")
         override fun onCharacteristicRead(
             gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int
         ) {
@@ -321,7 +324,6 @@ class BleClient(
             )
         }
 
-        @Deprecated("Deprecated in Java")
         override fun onCharacteristicWrite(
             gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int
         ) {

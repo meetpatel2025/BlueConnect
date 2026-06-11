@@ -38,28 +38,18 @@ class ServerViewModel(
         gattServer.toastMessage
 
     fun startServer() {
-
         gattServer.startServer()
-
         advertiser.startAdvertising()
-
         _isServerRunning.value = true
-
         addLog("GATT Server Started")
-
         addLog("Advertising Started")
     }
 
     fun stopServer() {
-
         advertiser.stopAdvertising()
-
         gattServer.stopServer()
-
         _isServerRunning.value = false
-
         addLog("Advertising Stopped")
-
         addLog("GATT Server Stopped")
     }
 
@@ -80,12 +70,12 @@ class ServerViewModel(
 //        gattServer.sendRandomNotification()
 //    }
 
-    fun onToggleStream() {
+    fun randomNotification() {
 
-        if (gattServer.isStreaming()) {
-            gattServer.stopRandomNotificationStream()
+        if (gattServer.isSending()) {
+            gattServer.stopRandomNotification()
         } else {
-            gattServer.startRandomNotificationStream()
+            gattServer.startRandomNotification()
         }
     }
 

@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.training.blueconnect.model.BleDevice
-
 @Composable
 fun DeviceItem(
     device: BleDevice
@@ -21,15 +20,28 @@ fun DeviceItem(
         ) {
 
             Text(
-                text = device.name
+                text =
+                    if (device.name.isBlank() ||
+                        device.name == "Unknown Device")
+                        "Unknown BLE Device"
+                    else
+                        "${device.name}"
+            )
+
+            Spacer(
+                modifier = Modifier.height(4.dp)
             )
 
             Text(
                 text = device.address
             )
 
+            Spacer(
+                modifier = Modifier.height(4.dp)
+            )
+
             Text(
-                text = "RSSI: ${device.rssi}"
+                text = "Signal: ${device.rssi} dBm"
             )
         }
     }

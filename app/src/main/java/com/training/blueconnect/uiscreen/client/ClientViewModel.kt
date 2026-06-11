@@ -1,9 +1,6 @@
 package com.training.blueconnect.uiscreen.client
 
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.training.blueconnect.ble.BleClient
 import com.training.blueconnect.ble.BleScanner
@@ -25,11 +22,6 @@ class ClientViewModel(
     private fun log(message: String) {
         _logs.value = (_logs.value + message).takeLast(100)
     }
-
-    //    fun startScan() {
-//        log("Scan started")
-//        scanner.startScan()
-//    }
     fun startScan() {
 
         if (!bluetoothAdapter.isEnabled) {
@@ -47,15 +39,6 @@ class ClientViewModel(
         log("Scan stopped")
         scanner.stopScan()
     }
-
-//    fun connect(address: String) {
-//        log("Connecting to $address")
-//
-//        val bluetoothDevice =
-//            bluetoothAdapter.getRemoteDevice(address)
-//
-//        bleClient.connect(bluetoothDevice)
-//    }
 
     fun connect(
         address: String

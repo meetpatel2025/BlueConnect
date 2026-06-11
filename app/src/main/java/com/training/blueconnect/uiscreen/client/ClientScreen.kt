@@ -49,11 +49,6 @@ fun ClientScreen() {
 
     val connectionState by vm.bleClient.connectionState.collectAsState()
 
-//    val permissionLauncher =
-//        rememberLauncherForActivityResult(
-//            contract = ActivityResultContracts.RequestMultiplePermissions()
-//        ) { }
-
     fun requiredPermissions(): Array<String> {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
@@ -69,6 +64,7 @@ fun ClientScreen() {
     }
 
     val devices by vm.devices.collectAsState()
+    val deviceCount = devices.size
 
     val scannerAvailable =
         remember { BleCapabilityChecker.isBleScannerAvailable(adapter) }
@@ -159,17 +155,68 @@ fun ClientScreen() {
                 }
             }
         }
-        items(devices) { device ->
+        item {
 
-            DeviceItem(device)
-
-            Button(
-                onClick = {
-                    vm.connect(device.address)
-                },
+            ElevatedCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Connect")
+
+                Column(
+                    Modifier.padding(16.dp)
+                ) {
+
+                    Text(
+                        text = "Devices Found: $deviceCount"
+                    )
+                }
+            }
+        }
+        if (devices.isEmpty()) {
+
+            item {
+
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+
+                    Column(
+                        modifier = Modifier.padding(24.dp)
+                    ) {
+
+                        Text(
+                            text = "Available Devices",
+                            style = MaterialTheme.typography.displayMedium
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(8.dp)
+                        )
+
+                        Text(
+                            text = "No BLE Devices Found"
+                        )
+
+                        Text(
+                            text = "Press Start Scan and make sure nearby devices are advertising."
+                        )
+                    }
+                }
+            }
+
+        } else {
+
+            items(devices) { device ->
+
+                DeviceItem(device)
+
+                Button(
+                    onClick = {
+                        vm.connect(device.address)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Connect")
+                }
             }
         }
         item {

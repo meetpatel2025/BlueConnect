@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 class BleAdvertiser(
     private val bluetoothAdapter: BluetoothAdapter
 ) {
-    private var tempIsAdvertising = false
+//    private var tempIsAdvertising = false
 
     private val advertiser: BluetoothLeAdvertiser?
             = bluetoothAdapter.bluetoothLeAdvertiser
@@ -34,7 +34,7 @@ class BleAdvertiser(
                 _isAdvertising.value = true
                 Log.d(
                     "ADVERTISE",
-                    "Advertising started successfully"
+                    "Advertising started successfullyyy...."
                 )
             }
 
@@ -58,7 +58,7 @@ class BleAdvertiser(
                         "TOO_MANY_ADVERTISERS"
 
                     else ->
-                        "UNKNOWN"
+                        "UNKNOWN_ERRORR"
                 }
 
                 Log.e(
@@ -83,6 +83,7 @@ class BleAdvertiser(
             return
         }
 
+        // set device name
         bluetoothAdapter.name = BleConstants.DEVICE_NAME
 
         val settings = AdvertiseSettings.Builder()
@@ -103,7 +104,7 @@ class BleAdvertiser(
 
         Log.d("ADVERTISE", "Device Name = ${bluetoothAdapter.name}")
         Log.d("ADVERTISE", "Service UUID = ${BleConstants.SERVICE_UUID}")
-        Log.d("ADVERTISE", "Advertising....")
+        Log.d("ADVERTISE", "Advertisinggg....")
 
         advertiser.startAdvertising(
             settings,
